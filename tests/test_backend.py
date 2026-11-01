@@ -17,6 +17,178 @@ def png(rgb=(255,0,0)):
     return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',2,2,8,2,0,0,0))+chunk(b'IDAT',zlib.compress((b'\0'+bytes(rgb)*2)*2))+chunk(b'IEND',b'')
 
 class BackendTests(unittest.TestCase):
+    def test_restore_last_uses_snapshots_after_library_sources_disappear(self):
+        old=self.image('old.png',(0,255,0));new=self.image();expected=old.read_bytes()
+        self.current_background(old);self.wallpaper_setters();selected='wall:'+self.b.token(new)
+        self.assertTrue(self.b.action(selected,'apply',True)['ok'])
+        old.unlink();new.unlink();value=self.b.catalog()
+        self.assertEqual(value['rows'],[]);self.assertIn('restore',value['actions'])
+        self.assertFalse(self.b.action('wall:unrelated','restore',True)['ok'])
+        result=self.b.action('restore:last','restore',True);self.assertTrue(result['ok'],result)
+        self.assertEqual(Path(self.b.current_background()).read_bytes(),expected)
+
+    def test_disappearing_selected_source_still_refuses_before_provider(self):
+        source=self.image();selected='wall:'+self.b.token(source);self.wallpaper_setters();actual=self.b.image_files
+        def race():
+            files=actual();source.unlink();return files
+        with patch.object(self.b,'image_files',race),patch.object(self.b,'run',wraps=self.b.run) as provider:
+            result=self.b.action(selected,'apply',True)
+        self.assertFalse(result['ok']);provider.assert_not_called()
+        self.assertEqual(self.b.journal(),{})
+
+    def test_apply_refuses_current_candidate_that_disappears_or_becomes_unsafe(self):
+        old=self.image('aaa.png',(0,255,0));wanted=self.image('zzz.png',(0,0,255));self.wallpaper_setters()
+        selected='wall:'+self.b.token(wanted);self.current_background(old)
+        self.assertTrue(self.b.action(selected,'apply',True)['ok'])
+        receipt_path=self.b.state_path()/'restore.json';receipt=receipt_path.read_bytes();actual=self.b.image_files
+        for replacement in ('missing','symlink','fifo','oversized'):
+            with self.subTest(replacement=replacement):
+                if old.exists() or old.is_symlink():old.unlink()
+                old.write_bytes(png((0,255,0)));self.current_background(old)
+                with self.b.State() as state:state.put('restore.json',receipt)
+                receipt_inode=receipt_path.stat().st_ino
+                def race():
+                    files=actual();self.assertIn(old,files);self.assertIn(wanted,files);old.unlink()
+                    if replacement=='symlink':old.symlink_to(wanted)
+                    if replacement=='fifo':os.mkfifo(old)
+                    if replacement=='oversized':
+                        with old.open('wb') as f:f.truncate(self.b.MAX_IMAGE+1)
+                    return files
+                with patch.object(self.b,'image_files',race),patch.object(self.b,'run',wraps=self.b.run) as provider:
+                    result=self.b.action(selected,'apply',True)
+                self.assertFalse(result['ok'],result);provider.assert_not_called()
+                self.assertEqual(self.b.current_background(),str(old))
+                self.assertEqual(receipt_path.read_bytes(),receipt)
+                self.assertEqual(receipt_path.stat().st_ino,receipt_inode)
+
+    def test_current_snapshot_failure_preserves_receipt_before_any_provider(self):
+        old=self.image('old.png',(0,255,0));wanted=self.image('wanted.png');self.wallpaper_setters()
+        selected='wall:'+self.b.token(wanted);self.current_background(old)
+        self.assertTrue(self.b.action(selected,'apply',True)['ok'])
+        receipt_path=self.b.state_path()/'restore.json';receipt=receipt_path.read_bytes();actual=self.b.snapshot
+        for replacement in ('missing','symlink','fifo','oversized'):
+            with self.subTest(replacement=replacement):
+                if old.exists() or old.is_symlink():old.unlink()
+                old.write_bytes(png((0,255,0)));self.current_background(old)
+                receipt_inode=receipt_path.stat().st_ino
+                def race(state,path):
+                    target=actual(state,path)
+                    if path==wanted:
+                        old.unlink()
+                        if replacement=='symlink':old.symlink_to(wanted)
+                        if replacement=='fifo':os.mkfifo(old)
+                        if replacement=='oversized':
+                            with old.open('wb') as f:f.truncate(self.b.MAX_IMAGE+1)
+                    return target
+                with patch.object(self.b,'snapshot',race),patch.object(self.b,'run',wraps=self.b.run) as provider:
+                    result=self.b.action(selected,'apply',True)
+                self.assertFalse(result['ok'],result);provider.assert_not_called()
+                self.assertEqual(self.b.current_background(),str(old))
+                self.assertEqual(receipt_path.read_bytes(),receipt)
+                self.assertEqual(receipt_path.stat().st_ino,receipt_inode)
+
+    def test_good_current_candidate_is_frozen_before_provider(self):
+        old=self.image('old.png',(0,255,0));wanted=self.image();expected=old.read_bytes()
+        self.current_background(old);self.wallpaper_setters();actual=self.b.run
+        def provider(argv,**kwargs):
+            if argv==['omarchy-shell','shell','ping']:
+                old.unlink()
+                self.assertTrue(any(p.read_bytes()==expected for p in self.b.state_path().glob('image-*')))
+            return actual(argv,**kwargs)
+        with patch.object(self.b,'run',provider):result=self.b.action('wall:'+self.b.token(wanted),'apply',True)
+        self.assertTrue(result['ok'],result)
+        self.assertEqual(Path(self.b.journal()['before']).read_bytes(),expected)
+        restored=self.b.action('restore:last','restore',True);self.assertTrue(restored['ok'],restored)
+        self.assertEqual(Path(self.b.current_background()).read_bytes(),expected)
+
+    def test_selected_current_source_races_preserve_prior_receipt(self):
+        source=self.image();self.current_background(source);self.wallpaper_setters()
+        self.assertTrue(self.b.action('wall:'+self.b.token(source),'apply',True)['ok'])
+        receipt_path=self.b.state_path()/'restore.json';receipt=receipt_path.read_bytes()
+        actual_files=self.b.image_files;actual_read=self.b.read
+        for stage in ('membership','snapshot'):
+            for replacement in ('missing','symlink','fifo','oversized'):
+                with self.subTest(stage=stage,replacement=replacement):
+                    if source.exists() or source.is_symlink():source.unlink()
+                    source.write_bytes(png());self.current_background(source);selected='wall:'+self.b.token(source)
+                    receipt_inode=receipt_path.stat().st_ino
+                    def replace_source():
+                        source.unlink()
+                        if replacement=='symlink':source.symlink_to(receipt_path)
+                        if replacement=='fifo':os.mkfifo(source)
+                        if replacement=='oversized':
+                            with source.open('wb') as f:f.truncate(self.b.MAX_IMAGE+1)
+                    def files():
+                        result=actual_files()
+                        if stage=='membership':replace_source()
+                        return result
+                    def read(path,*args):
+                        data=actual_read(path,*args)
+                        if stage=='snapshot' and Path(path)==source:replace_source()
+                        return data
+                    with patch.object(self.b,'image_files',files),patch.object(self.b,'read',read),patch.object(self.b,'run',wraps=self.b.run) as provider:
+                        result=self.b.action(selected,'apply',True)
+                    self.assertFalse(result['ok'],result);provider.assert_not_called()
+                    self.assertEqual(self.b.current_background(),str(source))
+                    self.assertEqual(receipt_path.read_bytes(),receipt)
+                    self.assertEqual(receipt_path.stat().st_ino,receipt_inode)
+
+    def test_unknown_current_is_not_read_or_admitted_outside_scan_limits(self):
+        wanted=self.image();self.wallpaper_setters();selected='wall:'+self.b.token(wanted);actual=self.b.opened
+        outside=self.home/'outside.png';outside.write_bytes(png((0,255,0)))
+        overfull=self.image('album/old.png',(0,255,0))
+        for i in range(self.b.MAX_ENTRIES):(overfull.parent/str(i)).touch()
+        for unknown in (None,outside,overfull):
+            with self.subTest(current=unknown):
+                link=self.home/'.local/state/omarchy/current/background'
+                if link.is_symlink():link.unlink()
+                if unknown is not None:self.current_background(unknown)
+                def opened(path,*args):
+                    self.assertNotIn(Path(path),(outside,overfull),'unknown/over-budget current must not be opened')
+                    return actual(path,*args)
+                with patch.object(self.b,'opened',opened):result=self.b.action(selected,'apply',True)
+                self.assertTrue(result['ok'],result);self.assertEqual(self.b.journal()['before'],'')
+                self.assertNotIn('restore',self.b.catalog()['actions'])
+        self.assertEqual(outside.read_bytes(),png((0,255,0)));self.assertEqual(overfull.read_bytes(),png((0,255,0)))
+
+    def test_catalog_skips_candidate_that_disappears_after_enumeration(self):
+        unrelated=self.image('aaa.png');wanted=self.image('zzz.png');actual=self.b.image_files
+        def race():
+            files=actual();unrelated.unlink();return files
+        with patch.object(self.b,'image_files',race):value=self.b.catalog()
+        self.assertEqual([r['preview'] for r in value['rows']],[str(wanted)])
+
+    def test_apply_skips_unrelated_candidate_that_disappears_or_becomes_unsafe(self):
+        unrelated=self.image('aaa.png');wanted=self.image('zzz.png',(0,0,255));self.wallpaper_setters()
+        selected='wall:'+self.b.token(wanted);actual=self.b.image_files
+        for replacement in ('missing','symlink','fifo','oversized'):
+            with self.subTest(replacement=replacement):
+                if unrelated.exists() or unrelated.is_symlink():unrelated.unlink()
+                unrelated.write_bytes(png())
+                def race():
+                    files=actual();unrelated.unlink()
+                    if replacement=='symlink':unrelated.symlink_to(wanted)
+                    if replacement=='fifo':os.mkfifo(unrelated)
+                    if replacement=='oversized':
+                        with unrelated.open('wb') as f:f.truncate(self.b.MAX_IMAGE+1)
+                    return files
+                with patch.object(self.b,'image_files',race):result=self.b.action(selected,'apply',True)
+                self.assertTrue(result['ok'],result)
+                self.assertEqual(Path(self.b.current_background()).read_bytes(),wanted.read_bytes())
+
+    def test_unrelated_disappearing_image_does_not_block_restore(self):
+        old=self.image('old.png',(0,255,0));new=self.image();self.current_background(old);self.wallpaper_setters()
+        selected='wall:'+self.b.token(new)
+        self.assertTrue(self.b.action(selected,'apply',True)['ok'])
+        unrelated=self.image('unrelated.png');actual=self.b.image_files
+        def disappear():
+            files=actual();unrelated.unlink();return files
+        with patch.object(self.b,'image_files',wraps=disappear) as scan:
+            result=self.b.action('restore:last','restore',True)
+        self.assertTrue(result['ok'],result)
+        scan.assert_not_called()
+        self.assertEqual(Path(self.b.current_background()).read_bytes(),old.read_bytes())
+
     def test_restore_refuses_in_place_current_snapshot_edit(self):
         old=self.image('old.png',(0,255,0));new=self.image();self.current_background(old);self.wallpaper_setters()
         selected=next(r['id'] for r in self.b.catalog()['rows'] if r['preview']==str(new))

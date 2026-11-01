@@ -144,7 +144,8 @@ def catalog():
     saved=journal();current=current_background()
     rows=[]
     for p in image_files():
-        identity='wall:'+token(p)
+        try: identity='wall:'+token(p)
+        except (OSError,ValueError): continue
         active=(str(p)==current or (saved.get('selected')==identity and saved.get('after')==current))
         rows.append({'id':identity,'label':p.name,'detail':'Local wallpaper'+(' · Current selection' if active else ''),'preview':str(p)})
     return {'rows':rows[:MAX_ROWS],'message':('Local still images; explicit apply only. Showing at most 256 of the bounded 512-file membership.' if rows else 'No safe local wallpapers found; add still images to Pictures/Wallpapers or Omarchy backgrounds. Symlinked/over-budget directories are excluded.'),'actions':['apply']+(['restore'] if remembered_image(journal().get('before')) else []),'actionLabel':'Apply'}
@@ -259,7 +260,6 @@ def remembered_image(value):
     except (OSError,ValueError): return False
 
 def perform(selected,verb):
-    members={'wall:'+token(p):p for p in image_files()}
     with State() as state:
         saved=journal();before=current_background()
         if verb=='restore':
@@ -269,17 +269,24 @@ def perform(selected,verb):
             target=saved.get('before')
             if not remembered_image(target): raise OperationError('Previous snapshot is missing or changed; restore refused')
         elif verb=='apply':
+            members={}
+            for candidate in image_files():
+                try: identity='wall:'+token(candidate)
+                except (OSError,ValueError):
+                    if str(candidate)==before: raise OperationError('Current wallpaper changed or disappeared; nothing applied')
+                    continue
+                members[identity]=candidate
             p=members.get(selected)
             if p is None: raise OperationError('Image changed or disappeared; refresh')
             # Freeze bytes before handing a path to an external program; never race an external library file.
             target=snapshot(state,p)
             if selected!='wall:'+token(p): raise OperationError('Image changed during snapshot; refresh')
+            old=''
+            if before in {str(p) for p in members.values()} or remembered_image(before): old=snapshot(state,Path(before))
         else: raise OperationError('Unsupported action')
         code,out,err=run(['omarchy-shell','shell','ping'],timeout=3)
         if code or out.strip()!=b'ok' or err: raise OperationError('Omarchy shell is unavailable; nothing applied')
         if verb=='apply':
-            old=''
-            if before in {str(p) for p in members.values()} or remembered_image(before): old=snapshot(state,Path(before))
             state.save({'selected':selected,'before':old,'after':target,'pending':True})
         code,out,err=run(['omarchy-theme-bg-set',target],timeout=5)
         if code or err or current_background()!=target: raise OperationError('Wallpaper setter did not confirm persistent state; partial changes may remain')
