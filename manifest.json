@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "leviathan.wallpaper-browser",
+  "name": "Wallpaper Browser",
+  "version": "0.1.0",
+  "author": "Ömer Eren",
+  "license": "GPL-3.0-only",
+  "description": "Browse local wallpaper images using the existing Omarchy background system.",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "runtime/0.1.0/WallpaperBrowser.qml"
+  }
+}
