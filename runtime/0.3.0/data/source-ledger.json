@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "hydeRepository": "https://github.com/HyDE-Project/HyDE",
+  "hydeCommit": "fa2fd57afc7203b1b5653d3271f3a57ea3873f97",
+  "sourceKind": "Read-only audited cached references and installed provider source; no donor code or assets copied",
+  "sources": {
+    "HyDE/LICENSE": {
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149,
+      "commit": "fa2fd57afc7203b1b5653d3271f3a57ea3873f97"
+    },
+    "HyDE/Configs/.local/lib/hyde/wallpaper/select.sh": {
+      "sha256": "4eca5c59865f5d503a21a118dd896e91c60693a55365214b219f3b6cb8974c0b",
+      "bytes": 2056,
+      "commit": "fa2fd57afc7203b1b5653d3271f3a57ea3873f97"
+    },
+    "/usr/share/omarchy/bin/omarchy-theme-bg-set": {
+      "sha256": "865beafef7643dc4aac6f2eca06d68808c197d39fba7fedaba75892cfd050a1a",
+      "bytes": 738
+    },
+    "/usr/share/omarchy/bin/omarchy-shell": {
+      "sha256": "fd1ac699c5d83846c8eb530ead22792be61b9704f68e64caa63f7243d170fa24",
+      "bytes": 5466
+    },
+    "/usr/share/omarchy/shell/plugins/background/Background.qml": {
+      "sha256": "bc0825a58c0cd01fe680c4628e1836e1cad74c7767941bb2e245b8394787f15c",
+      "bytes": 18730
+    },
+    "omarchy": {
+      "packageFields": [
+        "Name            : omarchy",
+        "Version         : 4.5.0rc2-1",
+        "Licenses        : MIT"
+      ]
+    }
+  },
+  "bundledImagesFontsDatasets": []
+}
