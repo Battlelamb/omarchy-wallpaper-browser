@@ -22,6 +22,10 @@ import tomllib
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 PREFERENCE_SCHEMA = {
+    'density': {'type':'enum','default':'comfortable','choices':['comfortable','compact'],'label':'Density'},
+    'layout': {'type':'enum','default':'grid','choices':['grid','list'],'label':'Layout'},
+    'sortOrder': {'type':'enum','default':'default','choices':['default','name','favorites-first'],'label':'Sort order'},
+    'fileType': {'type':'enum','default':'all','choices':['all','png','jpeg','webp','bmp'],'label':'File type'},
     'aspect': {'type':'enum','default':'all','choices':['all','landscape','portrait','square','ultrawide','unknown'],'label':'Aspect ratio'},
     'favoritesOnly': {'type':'boolean','default':False,'label':'Favorites only'},
     'folders': {'type':'string-list','default':[],'maxLength':4096,'label':'Saved local folders (JSON array)'},
@@ -225,17 +229,25 @@ def dimensions(path):
 def catalog():
     saved=journal();current=current_background()
     prefs=prefs_module().read(PLUGIN,PREFERENCE_SCHEMA)
+    favorites=set(prefs['favorites'])
     rows=[]
     for p in image_files():
-        try: identity='wall:'+token(p);width,height,category=dimensions(p)
+        try:
+            identity='wall:'+token(p);width,height,category=dimensions(p)
+            with opened(p) as (stream,before):
+                kind=image_type(stream.read(64)).lower()
+                if fingerprint(os.fstat(stream.fileno()))!=fingerprint(before): raise ValueError('Image changed while reading type')
         except (OSError,ValueError): continue
         active=(str(p)==current or (saved.get('selected')==identity and saved.get('after')==current))
-        favorite=identity in prefs['favorites']
+        favorite=identity in favorites
         groups=[name for name,ids in prefs['collections'].items() if identity in ids]
         options=prefs['options']
-        if (options['favoritesOnly'] and not favorite) or (options['aspect']!='all' and options['aspect']!=category) or (options['collection'] and options['collection'] not in groups): continue
+        if (options['fileType']!='all' and options['fileType']!=kind) or (options['favoritesOnly'] and not favorite) or (options['aspect']!='all' and options['aspect']!=category) or (options['collection'] and options['collection'] not in groups): continue
         detail='Local wallpaper · '+(f'{width} × {height} · {width/height:.2f}:1' if height else 'dimensions unknown')+(' · Current selection' if active else '')
-        rows.append({'id':identity,'label':p.name,'detail':detail,'preview':str(p),'favorite':favorite,'category':category,'collection':groups[0] if groups else p.parent.name})
+        rows.append({'id':identity,'label':p.name,'detail':detail,'preview':str(p),'fileType':kind,'favorite':favorite,'category':category,'collection':groups[0] if groups else p.parent.name})
+    # Match Controller's lowercase UTF-16 ordinal order; stable sorts retain input ties.
+    if prefs['options']['sortOrder']=='name': rows.sort(key=lambda row:row['label'].lower().encode('utf-16-be'))
+    elif prefs['options']['sortOrder']=='favorites-first': rows.sort(key=lambda row:not row['favorite'])
     return {'rows':rows[:MAX_ROWS],'preferences':prefs,'settingsSchema':PREFERENCE_SCHEMA,'message':('Local still images; explicit apply only. Showing at most 256 of the bounded 512-file membership.' if rows else 'No safe local wallpapers match these filters/roots.'),'actions':['apply','favorite','shuffle']+(['restore'] if remembered_image(journal().get('before')) else []),'actionLabel':'Apply'}
 
 

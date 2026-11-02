@@ -23,5 +23,18 @@
   "clearSearch": "Clear search",
   "details": "Selection details",
   "subtitle": "Find your next desktop backdrop.",
-  "safety": "Apply is explicit; Restore uses the last owned receipt."
+  "safety": "Apply is explicit; Restore uses the last owned receipt.",
+  "copy-unicode": "Copy Unicode escapes",
+  "copy-app-id": "Copy desktop-entry ID",
+  "copy-css": "Copy CSS palette",
+  "copy-codepoint": "Copy codepoint",
+  "open-folder": "Open folder",
+  "shuffle": "Shuffle selection",
+  "copy-color": "Copy color",
+  "capture": "Capture preset",
+  "import": "Import preset",
+  "export-preset": "Export preset",
+  "preview": "Preview",
+  "compare": "Compare",
+  "favorite": "Favorite"
 }

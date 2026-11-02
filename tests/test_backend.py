@@ -286,7 +286,8 @@ class BackendTests(unittest.TestCase):
         r,value=cli(verb);self.assertEqual(r.returncode,0,value);self.assertTrue(value['ok'])
         r,value=cli('restore');self.assertEqual(r.returncode,0,value);self.assertTrue(value['ok'])
     def test_sandbox_has_no_live_ipc_home_or_network(self):
-        self.assertFalse(Path('/srv/projects').exists());self.assertFalse(Path('/home/leviathan').exists())
+        self.assertFalse(Path('/srv').exists())
+        self.assertEqual(sorted(p.name for p in Path('/home').iterdir()),['test'])
         self.assertFalse(Path('/run/user').exists())
         interfaces=[line.split(':')[0].strip() for line in Path('/proc/net/dev').read_text().splitlines()[2:]]
         self.assertEqual(interfaces,['lo'])

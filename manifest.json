@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "leviathan.wallpaper-browser",
   "name": "Wallpaper Browser",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Ömer Eren",
   "license": "GPL-3.0-only",
   "description": "Browse local still wallpapers with previews; explicitly Apply or Restore a recognized previous selection. No wallpaper assets, rotation service or wallpaper engine are bundled. Open: omarchy-shell shell summon leviathan.wallpaper-browser. Type to search; arrows select; Enter acts; Esc closes.",
@@ -11,6 +11,6 @@
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "overlay": "runtime/0.3.0/WallpaperBrowser.qml"
+    "overlay": "runtime/0.4.0/WallpaperBrowser.qml"
   }
 }
