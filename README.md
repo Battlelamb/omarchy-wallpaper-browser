@@ -4,7 +4,7 @@
 
 Find wallpapers by name, encoded shape, folder, collection or file type. Preview a selection, shuffle to another candidate, then explicitly set the image you want. No bundled wallpaper pack, online source or rotation daemon.
 
-> **0.4.0 development candidate — not a stable release or installed upgrade.** Offline backend fixtures exercise selection and recovery. Native UI integration, live wallpaper changes and full nested upgrade/rollback remain separate qualification gates.
+> **0.4.1 development candidate — not a stable release or installed upgrade.** Offline backend fixtures exercise selection and recovery. Native UI integration, live wallpaper changes and full nested upgrade/rollback remain separate qualification gates.
 
 ![Wallpaper Browser 0.4.0 native Browse with illustrative catalogue data](preview.png)
 
@@ -25,10 +25,12 @@ Needs **Omarchy Quattro's native shell**, **Python 3.11+**, the installed backgr
 
 ```sh
 omarchy plugin add https://github.com/Battlelamb/omarchy-wallpaper-browser.git --enable
-omarchy-shell shell summon leviathan.wallpaper-browser
+omarchy-shell shell summon battlelamb.wallpaper-browser
 ```
 
-This Git install follows repository source rather than an unreleased candidate or stable tag. Bring your own images. Existing **Super+Space → Appearance → Wallpaper Browser** entries need no change; the summon command works without a dedicated hotkey.
+This Git install follows repository source rather than an unreleased candidate or stable tag. Bring your own images. The summon command works without a menu entry or dedicated hotkey.
+
+**Namespace migration:** existing installation, enabled-plugin, menu and binding references need updating to `battlelamb.wallpaper-browser`. Preferences and recovery data stay at their stable paths; a normal source update does not rename plugin IDs automatically.
 
 ## Look first, Apply second
 
@@ -106,12 +108,12 @@ The shipped bwrap runner clears HOME/environment, masks production setters and r
 Empty library? Clear search/view/saved filters, Refresh, and check safe folder ownership and scan limits. Refused Restore? Check external wallpaper changes or snapshot edits; do not bypass the conflict guard.
 
 ```sh
-omarchy-shell shell hide leviathan.wallpaper-browser
-omarchy plugin disable leviathan.wallpaper-browser
+omarchy-shell shell hide battlelamb.wallpaper-browser
+omarchy plugin disable battlelamb.wallpaper-browser
 # Optional; leaves images, preferences and recovery data intact:
-omarchy plugin remove leviathan.wallpaper-browser
+omarchy plugin remove battlelamb.wallpaper-browser
 ```
 
 **GPL-3.0-only** · [License](LICENSE) · [Source notices](NOTICE.md) · [Backend attribution](NOTICE.backend.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Independent community plugin by Ömer Eren; not an official Omarchy or HyDE release.
+Independent community plugin by Battlelamb; not an official Omarchy or HyDE release.

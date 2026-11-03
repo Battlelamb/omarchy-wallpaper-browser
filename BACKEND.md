@@ -1,19 +1,19 @@
-# Wallpaper Browser backend — v0.4.0
+# Wallpaper Browser backend — v0.4.1
 
 ## Exact CLI
 
 From the plugin checkout (runtime paths are otherwise independent of cwd):
 
 ```sh
-/usr/bin/python3 runtime/0.4.0/backend.py catalog
-/usr/bin/python3 runtime/0.4.0/backend.py preferences
-/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"options":{"folders":["/absolute/user-owned/image-folder"],"fileType":"jpeg","aspect":"landscape","favoritesOnly":false,"collection":""}}'
-/usr/bin/python3 runtime/0.4.0/backend.py action --id WALL-ID-FROM-CATALOG --verb favorite --apply
-/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"collections":{"Work":["WALL-ID-FROM-CATALOG"]},"options":{"collection":"Work"}}'
-/usr/bin/python3 runtime/0.4.0/backend.py action --id WALL-ID-FROM-CATALOG --verb shuffle --apply
-/usr/bin/python3 runtime/0.4.0/backend.py action --id WALL-ID-FROM-CATALOG --verb apply --apply
-/usr/bin/python3 runtime/0.4.0/backend.py action --id restore:last --verb restore --apply
-/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"reset":true}'
+/usr/bin/python3 runtime/0.4.1/backend.py catalog
+/usr/bin/python3 runtime/0.4.1/backend.py preferences
+/usr/bin/python3 runtime/0.4.1/backend.py preferences --apply --payload '{"options":{"folders":["/absolute/user-owned/image-folder"],"fileType":"jpeg","aspect":"landscape","favoritesOnly":false,"collection":""}}'
+/usr/bin/python3 runtime/0.4.1/backend.py action --id WALL-ID-FROM-CATALOG --verb favorite --apply
+/usr/bin/python3 runtime/0.4.1/backend.py preferences --apply --payload '{"collections":{"Work":["WALL-ID-FROM-CATALOG"]},"options":{"collection":"Work"}}'
+/usr/bin/python3 runtime/0.4.1/backend.py action --id WALL-ID-FROM-CATALOG --verb shuffle --apply
+/usr/bin/python3 runtime/0.4.1/backend.py action --id WALL-ID-FROM-CATALOG --verb apply --apply
+/usr/bin/python3 runtime/0.4.1/backend.py action --id restore:last --verb restore --apply
+/usr/bin/python3 runtime/0.4.1/backend.py preferences --apply --payload '{"reset":true}'
 ```
 
 Paths and IDs above are placeholders; use existing folders and exact current catalog IDs. **No Wallpaper Browser action accepts a payload.** `shuffle` still requires explicit `--apply` as command authorization, but it never invokes a desktop setter. It returns `selectedId`; applying that ID is a separate explicit action.
@@ -75,4 +75,4 @@ Only run tests through the shipped offline runner, with existing private `TMPDIR
 env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
 ```
 
-It clears HOME/env, masks production setters, uses offline bwrap with no host display/compositor sockets and controlled fixture providers. The shipped `tests/test_v040.py` covers common enum persistence/rejection/Reset and the new domain behavior; existing backend, v0.3 and store regressions remain. Historical v0.3 receipts, when present under `release-output/v030-tdd/` and `release-output/v030-result.json`, are not v0.4 verification. No GUI, live wallpaper changes, hosted CI, installation or publication is implied. Source/asset rights are in NOTICE.backend.md and `runtime/0.4.0/data/source-ledger.json`; no artwork is bundled.
+It clears HOME/env, masks production setters, uses offline bwrap with no host display/compositor sockets and controlled fixture providers. The shipped `tests/test_v040.py` covers common enum persistence/rejection/Reset and the new domain behavior; existing backend, v0.3 and store regressions remain. Historical v0.3 receipts, when present under `release-output/v030-tdd/` and `release-output/v030-result.json`, are not v0.4 verification. No GUI, live wallpaper changes, hosted CI, installation or publication is implied. Source/asset rights are in NOTICE.backend.md and `runtime/0.4.1/data/source-ledger.json`; no artwork is bundled.
